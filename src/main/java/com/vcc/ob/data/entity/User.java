@@ -44,12 +44,24 @@ public class User implements Serializable {
   @Column(name = "is_deleted")
   private boolean isDeleted;
 
+  @Column(name = "money")
+  private long money;
+
   public User(UserRequestDTO userRequestDTO, String userId){
     this.age = userRequestDTO.getAge();
     this.name = userRequestDTO.getName();
     this.address = userRequestDTO.getAddress();
     this.userId = userId;
     this.isDeleted = false;
+  }
+
+  public User(Long id, @NonNull String userId, String name, String address, int age, boolean isDeleted) {
+    this.id = id;
+    this.userId = userId;
+    this.name = name;
+    this.address = address;
+    this.age = age;
+    this.isDeleted = isDeleted;
   }
 
   public User(User userExist, UserRequestDTO userRequestDTO){
@@ -59,4 +71,9 @@ public class User implements Serializable {
     this.age = userRequestDTO.getAge();
     this.name = userRequestDTO.getName();
   }
+//
+//  @NonNull
+//  public String getUserId() {
+//    return userId;
+//  }
 }
