@@ -1,7 +1,9 @@
 package com.vcc.ob.controller;
 
 import com.vcc.ob.data.dto.request.UserRequestDTO;
+import com.vcc.ob.data.dto.request.UserSearchRequestDTO;
 import com.vcc.ob.data.dto.response.BaseResponse;
+import com.vcc.ob.data.entity.User;
 import com.vcc.ob.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.repository.query.Param;
@@ -42,18 +44,24 @@ public class UserController {
 
     @GetMapping
     public ResponseEntity<BaseResponse> searchUser(@RequestParam(name = "name", required = false) String name,
-                                                   @RequestParam(name = "address", required = false) String address) throws SQLException {
-        return new ResponseEntity<>(userService.searchUser(name, address), HttpStatus.OK);
+                                                   @RequestParam(name = "address", required = false) String address,
+                                                   @RequestParam(name = "page_number", required = false, defaultValue = "1") int pageNumber,
+                                                   @RequestParam(name = "page_size", required = false, defaultValue = "20") int pageSize) throws SQLException {
+        return new ResponseEntity<>(userService.searchUser(name, address, pageNumber, pageSize), HttpStatus.OK);
     }
 
     @GetMapping("/fill-data-test")
     public ResponseEntity<BaseResponse> createUsers() throws SQLException {
         return new ResponseEntity<>(userService.createUsers(), HttpStatus.OK);
     }
+
+    @PostMapping("")
+    public ResponseEntity<BaseResponse> getUsersByUserId(@RequestBody UserSearchRequestDTO userSearchRequestDTO) throws SQLException {
+        return new ResponseEntity<>(userService.getUsersByUserId(userSearchRequestDTO), HttpStatus.OK);
+    }
 }
 
 
 /**
  * Connection pool
- *
  */

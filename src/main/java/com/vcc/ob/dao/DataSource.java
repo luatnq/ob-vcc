@@ -21,6 +21,8 @@ public class DataSource {
         config.setJdbcUrl( "jdbc:mysql://localhost:33061/database" );
         config.setUsername( "root" );
         config.setPassword( "root" );
+        config.setAutoCommit(false);
+        config.setMaximumPoolSize(5);
         config.addDataSourceProperty( "cachePrepStmts" , "true" );
         config.addDataSourceProperty( "prepStmtCacheSize" , "250" );
         config.addDataSourceProperty( "prepStmtCacheSqlLimit" , "2048" );

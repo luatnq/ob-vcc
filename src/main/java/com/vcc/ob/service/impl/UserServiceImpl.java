@@ -2,8 +2,8 @@ package com.vcc.ob.service.impl;
 
 import com.vcc.ob.constant.MessageResponse;
 import com.vcc.ob.dao.UserDAO;
-import com.vcc.ob.dao.impl.UserDataSourceImpl;
 import com.vcc.ob.data.dto.request.UserRequestDTO;
+import com.vcc.ob.data.dto.request.UserSearchRequestDTO;
 import com.vcc.ob.data.dto.response.BaseResponse;
 import com.vcc.ob.data.dto.response.UserResponseDTO;
 import com.vcc.ob.data.entity.User;
@@ -24,17 +24,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    @Autowired
-    private UserDAO userDAO;
+    private final UserDAO userDAO;
 
     @Override
-//    @Transactional
     public BaseResponse createUser(UserRequestDTO userRequestDTO) throws SQLException {
 
         User userReq = new User(userRequestDTO, this.generateUserId());
         if (this.checkUserIdExist(userReq.getUserId())) throw new EntityExistedException();
 
-        UserDAO userDAO = new UserDataSourceImpl();
         return new BaseResponse(MessageResponse.USER_INFO, new UserResponseDTO(userDAO.insertUser(userReq)));
 
     }
@@ -42,7 +39,6 @@ public class UserServiceImpl implements UserService {
     @Override
     public BaseResponse updateUser(UserRequestDTO userRequestDTO, String userId) throws SQLException {
         if (!checkUserIdExist(userId)) throw new NotFoundException();
-        UserDAO userDAO = new UserDataSourceImpl();
 
         User userExisted = userDAO.getUserByUserId(userId);
         User userUpdate = new User(userExisted, userRequestDTO);
@@ -57,10 +53,10 @@ public class UserServiceImpl implements UserService {
 
         if (!checkUserIdExist(userId)) throw new NotFoundException();
 
-        UserDAO userDAO = new UserDataSourceImpl();
         User user = userDAO.getUserByUserId(userId);
         user.setDeleted(true);
         userDAO.updateUser(user);
+
         return new BaseResponse(MessageResponse.SUCCESS);
 
     }
@@ -68,7 +64,6 @@ public class UserServiceImpl implements UserService {
     @Override
     public BaseResponse findByUserId(String userId) throws SQLException {
 
-        UserDAO userDAO = new UserDataSourceImpl();
         User user = userDAO.getUserByUserId(userId);
 
         if (Objects.isNull(user)) throw new NotFoundException();
@@ -77,10 +72,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public BaseResponse searchUser(String name, String address) throws SQLException {
+    public BaseResponse searchUser(String name, String address, int pageNum, int pageSize) throws SQLException {
 
-        UserDAO userDAO = new UserDataSourceImpl();
-        List<User> users = userDAO.searchUserByNameOrAddress(name, address);
+        List<User> users = userDAO.searchUserByName(name, pageNum, pageSize);
 
         return new BaseResponse(MessageResponse.SUCCESS, users);
     }
@@ -88,12 +82,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public BaseResponse createUsers() throws SQLException {
-        UserDAO userDAO = new UserDataSourceImpl();
 
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 500; i++) {
             userDAO.insertBatchUser();
         }
         return new BaseResponse(MessageResponse.SUCCESS);
+    }
+
+    @Override
+    public BaseResponse getUsersByUserId(UserSearchRequestDTO userSearchRequestDTO) throws SQLException {
+
+        return new BaseResponse(MessageResponse.SUCCESS, userDAO.searchUsersByUserId(userSearchRequestDTO.getUserIds()));
+
     }
 
     private String generateUserId() {
@@ -102,7 +102,6 @@ public class UserServiceImpl implements UserService {
 
     private boolean checkUserIdExist(String userId) throws SQLException {
 
-        UserDAO userDAO = new UserDataSourceImpl();
         User user = userDAO.getUserByUserId(userId);
         if (Objects.nonNull(user)) {
             return true;

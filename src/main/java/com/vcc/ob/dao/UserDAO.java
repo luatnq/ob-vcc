@@ -17,4 +17,8 @@ public interface UserDAO {
     List<User> searchUserByName(String name, int pageNum, int pageSize) throws SQLException;
 
     void insertBatchUser() throws SQLException;
+
+    List<User> searchUsersByUserId(List<String> userIds) throws SQLException;
+
+//    List<User> searchUserByName(String name) throws SQLException;
 }

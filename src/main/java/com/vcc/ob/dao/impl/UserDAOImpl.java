@@ -4,22 +4,16 @@ import com.vcc.ob.dao.DataSource;
 import com.vcc.ob.dao.UserDAO;
 import com.vcc.ob.data.entity.User;
 import com.vcc.ob.exception.QueryFailException;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.sql.*;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Repository
-public class UserDataSourceImpl implements UserDAO {
+public class UserDAOImpl implements UserDAO {
 
     private final String INSERT_USER = "INSERT INTO users (address, age, is_deleted, name, user_id) VALUES (?,?,?,?,?) ";
     private final String UPDATE_USER = "UPDATE users as u SET u.address = ?, u.age = ?, u.name = ?, u.is_deleted = ? WHERE u.id = ? ";
@@ -28,8 +22,12 @@ public class UserDataSourceImpl implements UserDAO {
             " and ( ? is null OR u.address LIKE ? ) ORDER BY u.name "
              + "LIMIT ?,? ";
 
+    private final String SEARCH_USER_BY_USER_ID = "select * from users u where u.user_id in (?)";
+
     private final String SEARCH_USER_BY_NAME = "SELECT * FROM users u WHERE ( ? is null OR  u.name LIKE ? ) ORDER BY u.name "
             + "LIMIT ?,? ";
+    private final String SEARCH_USER_FULL_TEXT = "SELECT u.*  FROM users u " +
+            "where MATCH (u.name) AGAINST ( ? IN BOOLEAN MODE) LIMIT ?,? ";
     private final int PAGE_SIZE_DEFAULT = 10;
 
 
@@ -148,15 +146,15 @@ public class UserDataSourceImpl implements UserDAO {
         }
     }
 
-    public List<User> searchUserByName(String name, int pageNum, int pageSize) throws SQLException {
+    public List<User> searchUsersByUserId(List<String> userIds) throws SQLException {
 
         try {
+            String sqlIN = userIds.stream()
+                    .collect(Collectors.joining("', '", "('", "')"));
 
-            PreparedStatement preparedStatement = DataSource.getConnection().prepareStatement(SEARCH_USER_BY_NAME_OR_ADDRESS);
-            preparedStatement.setString(1, name);
-            preparedStatement.setString(2, "%" + name + "%");
-            preparedStatement.setInt(3, pageNum*pageSize);
-            preparedStatement.setInt(4, pageSize);
+            String sql = SEARCH_USER_BY_USER_ID.replace("(?)", sqlIN);
+            System.out.println(sql);
+            PreparedStatement preparedStatement = DataSource.getConnection().prepareStatement(sql);
 
             ResultSet rs = preparedStatement.executeQuery();
 
@@ -175,6 +173,7 @@ public class UserDataSourceImpl implements UserDAO {
             return users;
 
         } catch (SQLException e) {
+            e.printStackTrace();
             throw new QueryFailException();
         } finally {
             if (Objects.nonNull(DataSource.getConnection())) {
@@ -183,8 +182,48 @@ public class UserDataSourceImpl implements UserDAO {
         }
     }
 
+    public List<User> searchUserByName(String name, int pageNum, int pageSize) throws SQLException {
+
+        try {
+
+            PreparedStatement preparedStatement = DataSource.getConnection().prepareStatement(SEARCH_USER_FULL_TEXT);
+
+            preparedStatement.setString(1, "*" + name);
+            preparedStatement.setInt(2, pageNum*pageSize);
+            preparedStatement.setInt(3, pageSize);
+
+            ResultSet rs = preparedStatement.executeQuery();
+
+            List<User> users = new ArrayList<>();
+            while (rs.next()) {
+                User user = new User(
+                        rs.getLong("id"),
+                        rs.getString("user_id"),
+                        rs.getString("name"),
+                        rs.getString("address"),
+                        rs.getInt("age"),
+                        rs.getBoolean("is_deleted"));
+
+                users.add(user);
+            }
+            System.out.println(users.size());
+            return users;
+
+        } catch (SQLException e) {
+            throw new QueryFailException();
+        } finally {
+            if (Objects.nonNull(DataSource.getConnection())) {
+                DataSource.getConnection().close();
+            }
+        }
+    }
+
+
+
     public void insertBatchUser() throws SQLException {
         String[] names = {"Luat", "Nam", "Ha", "Mai", "Trong", "Viet", "Trinh", "Xoan", "Hong", "Dai"};
+        String[] firstName = {"Nguyen", "Le", "Dang", "Ta", "Bui", "Vu", "Dao", "Luong", "Tran", "Nghiem"};
+        String[] middleName = {"Huy", "Thi", "Van", "Thanh", "Quoc", "Viet", "Quang", "Nguyet", "Hong", "Dai"};
         String[] address = {"Ha Noi", "Hai Phong", "Hai Duong", "Nam Dinh", "Quang Ninh", "Cao Bang", "Thanh Hoa", "Sai Gon", "Quang tri", "Quang Binh"};
         try(Connection conn = DataSource.getConnection()){
 
@@ -198,7 +237,8 @@ public class UserDataSourceImpl implements UserDAO {
                 preparedStatement.setString(1, address[(int) Math.floor(Math.random() * (9 + 1))]);
                 preparedStatement.setInt(2, (int) Math.floor(Math.random() * (100 - 1 + 1) + 1));
                 preparedStatement.setBoolean(3, false);
-                preparedStatement.setString(4, names[(int) Math.floor(Math.random() * (9 + 1))]);
+                preparedStatement.setString(4, firstName[(int) Math.floor(Math.random() * (9 + 1))] + " " +
+                        middleName[(int) Math.floor(Math.random() * (9 + 1))] + " " + names[(int) Math.floor(Math.random() * (9 + 1))]);
                 preparedStatement.setString(5, UUID.randomUUID().toString());
                 preparedStatement.addBatch();
             }
