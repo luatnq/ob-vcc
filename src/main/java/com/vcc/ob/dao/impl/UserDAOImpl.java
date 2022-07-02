@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 public class UserDAOImpl implements UserDAO {
 
     private final String INSERT_USER = "INSERT INTO users (address, age, is_deleted, name, user_id) VALUES (?,?,?,?,?) ";
-    private final String UPDATE_USER = "UPDATE users as u SET u.address = ?, u.age = ?, u.name = ?, u.is_deleted = ? WHERE u.id = ? ";
+    private final String UPDATE_USER = "UPDATE users as u SET u.address = ?, u.age = ?, u.name = ?, u.is_deleted = ?, u.money = ?  WHERE u.id = ? ";
     private final String QUERY_GET_USER_BY_UID = "SELECT * FROM users as u WHERE u.user_id  = ? ";
     private final String SEARCH_USER_BY_NAME_OR_ADDRESS = "SELECT * FROM users u WHERE ( ? is null OR  u.name LIKE ? ) " +
             " and ( ? is null OR u.address LIKE ? ) ORDER BY u.name "
@@ -45,6 +45,7 @@ public class UserDAOImpl implements UserDAO {
             preparedStatement.setString(5, user.getUserId());
 
             int row = preparedStatement.executeUpdate();
+            conn.commit();
             System.out.println("Row affected: " + row);
 
             return this.getUserByUserId(user.getUserId());
@@ -70,9 +71,11 @@ public class UserDAOImpl implements UserDAO {
             preparedStatement.setInt(2, user.getAge());
             preparedStatement.setString(3, user.getName());
             preparedStatement.setBoolean(4, user.isDeleted());
-            preparedStatement.setLong(5, user.getId());
+            preparedStatement.setLong(5, user.getMoney());
+            preparedStatement.setLong(6, user.getId());
 
             int row = preparedStatement.executeUpdate();
+            conn.commit();
             System.out.println("Row affected: " + row);
 
             return this.getUserByUserId(user.getUserId());
@@ -81,6 +84,31 @@ public class UserDAOImpl implements UserDAO {
             throw new QueryFailException();
         }
     }
+
+    public void updateUserNonResponse(User user) throws SQLException {
+        try(Connection conn = DataSource.getConnection()){
+            System.out.println("Updating record:...");
+
+            conn.setAutoCommit(false);
+            PreparedStatement preparedStatement = conn.prepareStatement(UPDATE_USER);
+
+            preparedStatement.setString(1, user.getAddress());
+            preparedStatement.setInt(2, user.getAge());
+            preparedStatement.setString(3, user.getName());
+            preparedStatement.setBoolean(4, user.isDeleted());
+            preparedStatement.setLong(5, user.getMoney());
+            preparedStatement.setLong(6, user.getId());
+
+            int row = preparedStatement.executeUpdate();
+            conn.commit();
+            System.out.println("Row affected: " + row);
+
+        } catch (SQLException e) {
+            DataSource.getConnection().rollback();
+            throw new QueryFailException();
+        }
+    }
+
     public User getUserByUserId(String userId) throws SQLException {
         try(Connection conn = DataSource.getConnection()){
             PreparedStatement preparedStatement = conn.prepareStatement(QUERY_GET_USER_BY_UID);
@@ -94,7 +122,8 @@ public class UserDAOImpl implements UserDAO {
                         rs.getString("name"),
                         rs.getString("address"),
                         rs.getInt("age"),
-                        rs.getBoolean("is_deleted"));
+                        rs.getBoolean("is_deleted"),
+                        rs.getLong("money"));
 
                 return user;
             }

@@ -2,6 +2,7 @@ package com.vcc.ob.service.impl;
 
 import com.vcc.ob.constant.MessageResponse;
 import com.vcc.ob.dao.UserDAO;
+import com.vcc.ob.data.dto.request.TransactionMoneyRequestDTO;
 import com.vcc.ob.data.dto.request.UserRequestDTO;
 import com.vcc.ob.data.dto.request.UserSearchRequestDTO;
 import com.vcc.ob.data.dto.response.BaseResponse;
@@ -93,6 +94,38 @@ public class UserServiceImpl implements UserService {
     public BaseResponse getUsersByUserId(UserSearchRequestDTO userSearchRequestDTO) throws SQLException {
 
         return new BaseResponse(MessageResponse.SUCCESS, userDAO.searchUsersByUserId(userSearchRequestDTO.getUserIds()));
+
+    }
+
+    public BaseResponse transactionMoney(TransactionMoneyRequestDTO transactionMoneyRequestDTO) throws SQLException {
+
+        User userSend = userDAO.getUserByUserId(transactionMoneyRequestDTO.getFromUserId());
+
+        if (!this.isUserEligible(userSend)){
+            return new BaseResponse(MessageResponse.USER_NOT_ELIGIBLE_TRANSACTION_MONEY);
+        }
+
+        User userReceive = userDAO.getUserByUserId(transactionMoneyRequestDTO.getToUserId());
+        this.moneyProcess(userSend, userReceive, transactionMoneyRequestDTO.getMoney());
+
+        userDAO.updateUserNonResponse(userSend);
+        userDAO.updateUserNonResponse(userReceive);
+
+        return new BaseResponse(MessageResponse.SUCCESS);
+
+    }
+
+    private boolean isUserEligible(User user){
+
+        if (user.getMoney() > 0) return true;
+        return false;
+
+    }
+
+    private void moneyProcess(User userSend, User userReceive, long moneyPlus){
+
+        userReceive.setMoney( userReceive.getMoney() + moneyPlus);
+        userSend.setMoney(userSend.getMoney() - moneyPlus);
 
     }
 

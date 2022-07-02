@@ -12,6 +12,8 @@ public interface UserDAO {
 
     User updateUser(User user) throws SQLException;
 
+    void updateUserNonResponse(User user) throws SQLException;
+
     List<User> searchUserByNameOrAddress(String name, String address) throws SQLException;
 
     List<User> searchUserByName(String name, int pageNum, int pageSize) throws SQLException;

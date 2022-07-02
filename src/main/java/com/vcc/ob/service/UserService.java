@@ -1,5 +1,6 @@
 package com.vcc.ob.service;
 
+import com.vcc.ob.data.dto.request.TransactionMoneyRequestDTO;
 import com.vcc.ob.data.dto.request.UserRequestDTO;
 import com.vcc.ob.data.dto.request.UserSearchRequestDTO;
 import com.vcc.ob.data.dto.response.BaseResponse;
@@ -22,4 +23,5 @@ public interface UserService {
 
     BaseResponse getUsersByUserId(UserSearchRequestDTO userSearchRequestDTO) throws SQLException;
 
+    BaseResponse transactionMoney(TransactionMoneyRequestDTO transactionMoneyRequestDTO) throws SQLException;
 }
