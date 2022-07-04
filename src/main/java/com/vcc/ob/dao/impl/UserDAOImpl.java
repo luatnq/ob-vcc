@@ -1,5 +1,6 @@
 package com.vcc.ob.dao.impl;
 
+import com.vcc.ob.constant.ErrorMessageConstant;
 import com.vcc.ob.dao.DataSource;
 import com.vcc.ob.dao.UserDAO;
 import com.vcc.ob.data.entity.User;
@@ -20,7 +21,7 @@ public class UserDAOImpl implements UserDAO {
     private final String QUERY_GET_USER_BY_UID = "SELECT * FROM users as u WHERE u.user_id  = ? ";
     private final String SEARCH_USER_BY_NAME_OR_ADDRESS = "SELECT * FROM users u WHERE ( ? is null OR  u.name LIKE ? ) " +
             " and ( ? is null OR u.address LIKE ? ) ORDER BY u.name "
-             + "LIMIT ?,? ";
+            + "LIMIT ?,? ";
 
     private final String SEARCH_USER_BY_USER_ID = "select * from users u where u.user_id in (?)";
 
@@ -32,8 +33,13 @@ public class UserDAOImpl implements UserDAO {
 
 
     public User insertUser(User user) throws SQLException {
-        try(Connection conn = DataSource.getConnection()){
 
+        Connection conn = null;
+
+
+        try {
+
+            conn = DataSource.getInstance().getConnection();
             System.out.println("Inserting record into table users....");
             conn.setAutoCommit(false);
             PreparedStatement preparedStatement = conn.prepareStatement(INSERT_USER);
@@ -51,17 +57,21 @@ public class UserDAOImpl implements UserDAO {
             return this.getUserByUserId(user.getUserId());
 
         } catch (SQLException e) {
-            DataSource.getConnection().rollback();
+            conn.rollback();
             throw new QueryFailException();
         } finally {
-            if (Objects.nonNull(DataSource.getConnection())) {
-                DataSource.getConnection().close();
+            if (Objects.nonNull(conn)) {
+                conn.close();
             }
         }
     }
 
     public User updateUser(User user) throws SQLException {
-        try(Connection conn = DataSource.getConnection()){
+
+        Connection conn = null;
+        try {
+
+            conn = DataSource.getInstance().getConnection();
             System.out.println("Updating record:...");
 
             conn.setAutoCommit(false);
@@ -79,14 +89,25 @@ public class UserDAOImpl implements UserDAO {
             System.out.println("Row affected: " + row);
 
             return this.getUserByUserId(user.getUserId());
+
         } catch (SQLException e) {
-            DataSource.getConnection().rollback();
+            conn.rollback();
             throw new QueryFailException();
+        } finally {
+            if (Objects.nonNull(conn)) {
+                conn.close();
+            }
         }
     }
 
     public void updateUserNonResponse(User user) throws SQLException {
-        try(Connection conn = DataSource.getConnection()){
+
+        Connection conn = null;
+
+        try {
+
+            conn = DataSource.getInstance().getConnection();
+
             System.out.println("Updating record:...");
 
             conn.setAutoCommit(false);
@@ -104,18 +125,28 @@ public class UserDAOImpl implements UserDAO {
             System.out.println("Row affected: " + row);
 
         } catch (SQLException e) {
-            DataSource.getConnection().rollback();
+            conn.rollback();
+            log.error("(Exception) message: {}", ErrorMessageConstant.QUERY_DATABASE_FAIL);
             throw new QueryFailException();
+        } finally {
+            if (Objects.nonNull(conn)) {
+                conn.close();
+            }
         }
     }
 
     public User getUserByUserId(String userId) throws SQLException {
-        try(Connection conn = DataSource.getConnection()){
+
+        Connection conn = null;
+
+        try {
+
+            conn = DataSource.getInstance().getConnection();
             PreparedStatement preparedStatement = conn.prepareStatement(QUERY_GET_USER_BY_UID);
             preparedStatement.setString(1, userId);
             ResultSet rs = preparedStatement.executeQuery();
 
-            if (rs.next()){
+            if (rs.next()) {
                 User user = new User(
                         rs.getLong("id"),
                         rs.getString("user_id"),
@@ -132,17 +163,19 @@ public class UserDAOImpl implements UserDAO {
         } catch (SQLException e) {
             throw new QueryFailException();
         } finally {
-            if (Objects.nonNull(DataSource.getConnection())) {
-                DataSource.getConnection().close();
+            if (Objects.nonNull(conn)) {
+                conn.close();
             }
         }
     }
 
     public List<User> searchUserByNameOrAddress(String name, String address) throws SQLException {
 
+        Connection conn = null;
         try {
 
-            PreparedStatement preparedStatement = DataSource.getConnection().prepareStatement(SEARCH_USER_BY_NAME_OR_ADDRESS);
+            conn = DataSource.getInstance().getConnection();
+            PreparedStatement preparedStatement = conn.prepareStatement(SEARCH_USER_BY_NAME_OR_ADDRESS);
             preparedStatement.setString(1, name);
             preparedStatement.setString(2, "%" + name + "%");
             preparedStatement.setString(3, address);
@@ -169,21 +202,21 @@ public class UserDAOImpl implements UserDAO {
         } catch (SQLException e) {
             throw new QueryFailException();
         } finally {
-            if (Objects.nonNull(DataSource.getConnection())) {
-                DataSource.getConnection().close();
+            if (Objects.nonNull(conn)) {
+                conn.close();
             }
         }
     }
 
     public List<User> searchUsersByUserId(List<String> userIds) throws SQLException {
 
-        try {
-            String sqlIN = userIds.stream()
-                    .collect(Collectors.joining("', '", "('", "')"));
+        Connection conn = null;
 
-            String sql = SEARCH_USER_BY_USER_ID.replace("(?)", sqlIN);
-            System.out.println(sql);
-            PreparedStatement preparedStatement = DataSource.getConnection().prepareStatement(sql);
+        try {
+
+            conn = DataSource.getInstance().getConnection();
+            PreparedStatement preparedStatement = conn.prepareStatement(
+                    this.insertParamQuery(userIds, QUERY_GET_USER_BY_UID));
 
             ResultSet rs = preparedStatement.executeQuery();
 
@@ -202,23 +235,28 @@ public class UserDAOImpl implements UserDAO {
             return users;
 
         } catch (SQLException e) {
-            e.printStackTrace();
+
             throw new QueryFailException();
+
         } finally {
-            if (Objects.nonNull(DataSource.getConnection())) {
-                DataSource.getConnection().close();
+
+            if (Objects.nonNull(conn)) {
+                conn.close();
             }
         }
     }
 
     public List<User> searchUserByName(String name, int pageNum, int pageSize) throws SQLException {
 
+        Connection conn = null;
+
         try {
 
-            PreparedStatement preparedStatement = DataSource.getConnection().prepareStatement(SEARCH_USER_FULL_TEXT);
+            conn = DataSource.getInstance().getConnection();
+            PreparedStatement preparedStatement = conn.prepareStatement(SEARCH_USER_FULL_TEXT);
 
             preparedStatement.setString(1, "*" + name);
-            preparedStatement.setInt(2, pageNum*pageSize);
+            preparedStatement.setInt(2, pageNum * pageSize);
             preparedStatement.setInt(3, pageSize);
 
             ResultSet rs = preparedStatement.executeQuery();
@@ -239,14 +277,17 @@ public class UserDAOImpl implements UserDAO {
             return users;
 
         } catch (SQLException e) {
+
             throw new QueryFailException();
+
         } finally {
-            if (Objects.nonNull(DataSource.getConnection())) {
-                DataSource.getConnection().close();
+
+            if (Objects.nonNull(conn)) {
+                conn.close();
             }
+
         }
     }
-
 
 
     public void insertBatchUser() throws SQLException {
@@ -254,14 +295,19 @@ public class UserDAOImpl implements UserDAO {
         String[] firstName = {"Nguyen", "Le", "Dang", "Ta", "Bui", "Vu", "Dao", "Luong", "Tran", "Nghiem"};
         String[] middleName = {"Huy", "Thi", "Van", "Thanh", "Quoc", "Viet", "Quang", "Nguyet", "Hong", "Dai"};
         String[] address = {"Ha Noi", "Hai Phong", "Hai Duong", "Nam Dinh", "Quang Ninh", "Cao Bang", "Thanh Hoa", "Sai Gon", "Quang tri", "Quang Binh"};
-        try(Connection conn = DataSource.getConnection()){
+
+        Connection conn = null;
+
+        try {
+
+            conn = DataSource.getInstance().getConnection();
 
             System.out.println("Inserting record into table users....");
 
             PreparedStatement preparedStatement = conn.prepareStatement(INSERT_USER);
             conn.setAutoCommit(false);
 
-            for (int i = 0; i< 10000; i++) {
+            for (int i = 0; i < 10000; i++) {
 
                 preparedStatement.setString(1, address[(int) Math.floor(Math.random() * (9 + 1))]);
                 preparedStatement.setInt(2, (int) Math.floor(Math.random() * (100 - 1 + 1) + 1));
@@ -277,8 +323,23 @@ public class UserDAOImpl implements UserDAO {
             conn.commit();
 
         } catch (SQLException e) {
-            DataSource.getConnection().rollback();
+
+            conn.rollback();
             throw new QueryFailException();
+
+        } finally {
+
+            if (Objects.nonNull(conn)) {
+                conn.close();
+            }
+
         }
+    }
+
+    private String insertParamQuery(List<String> userIds, String queryInput) {
+
+        String sqlIN = userIds.stream().collect(Collectors.joining("', '", "('", "')"));
+        return queryInput.replace("(?)", sqlIN);
+
     }
 }
