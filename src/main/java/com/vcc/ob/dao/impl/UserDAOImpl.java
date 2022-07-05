@@ -34,7 +34,7 @@ public class UserDAOImpl implements UserDAO {
     private final String SEARCH_USER_FULL_TEXT = "SELECT u.*  FROM users u " +
             "where MATCH (u.name) AGAINST ( ? IN BOOLEAN MODE) LIMIT ?,? ";
 
-    private final String SELECT_FOR_UPDATE = "SELECT * FROM users as u WHERE u.user_id  = '?' for update ";
+    private final String SELECT_FOR_UPDATE = "SELECT * FROM users as u WHERE u.user_id  = '?' ";
 
     private final int PAGE_SIZE_DEFAULT = 10;
 
@@ -360,6 +360,10 @@ public class UserDAOImpl implements UserDAO {
         try {
 
             conn = DataSource.getInstance().getConnection();
+            conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
+            System.out.println(conn.getTransactionIsolation());
+
             conn.setAutoCommit(false);
             Statement stmt = conn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 
