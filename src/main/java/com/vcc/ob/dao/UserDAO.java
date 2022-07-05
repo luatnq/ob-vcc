@@ -22,5 +22,9 @@ public interface UserDAO {
 
     List<User> searchUsersByUserId(List<String> userIds) throws SQLException;
 
+    void moneyProcess(String userIdSend, String userIdReceive, long money) throws SQLException;
+
+//    void moneyProcess(String userIdSend, String userIdReceive, long money) throws SQLException;
+
 //    List<User> searchUserByName(String name) throws SQLException;
 }

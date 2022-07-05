@@ -4,6 +4,8 @@ import com.vcc.ob.constant.ErrorMessageConstant;
 import com.vcc.ob.dao.DataSource;
 import com.vcc.ob.dao.UserDAO;
 import com.vcc.ob.data.entity.User;
+import com.vcc.ob.exception.BaseException;
+import com.vcc.ob.exception.NotFoundException;
 import com.vcc.ob.exception.QueryFailException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -23,13 +25,26 @@ public class UserDAOImpl implements UserDAO {
             " and ( ? is null OR u.address LIKE ? ) ORDER BY u.name "
             + "LIMIT ?,? ";
 
+    private final String UPDATE_MONEY_USER = "UPDATE users as u SET u.money = ?  WHERE u.user_id = ? ";
+
     private final String SEARCH_USER_BY_USER_ID = "select * from users u where u.user_id in (?)";
 
     private final String SEARCH_USER_BY_NAME = "SELECT * FROM users u WHERE ( ? is null OR  u.name LIKE ? ) ORDER BY u.name "
             + "LIMIT ?,? ";
     private final String SEARCH_USER_FULL_TEXT = "SELECT u.*  FROM users u " +
             "where MATCH (u.name) AGAINST ( ? IN BOOLEAN MODE) LIMIT ?,? ";
+
+    private final String SELECT_FOR_UPDATE = "SELECT * FROM users as u WHERE u.user_id  = '?' for update ";
+
     private final int PAGE_SIZE_DEFAULT = 10;
+
+    private final String LOCK_TABLE_WIRE = "LOCK TABLE (?) WRITE ";
+
+    private final String UNLOCK_TABLE_WRITE = "UNLOCK TABLES";
+
+    private final String TYPE_HANDLE_PLUS = "plus";
+
+    private final String TYPE_HANDLE_SUB = "sub";
 
 
     public User insertUser(User user) throws SQLException {
@@ -51,6 +66,7 @@ public class UserDAOImpl implements UserDAO {
             preparedStatement.setString(5, user.getUserId());
 
             int row = preparedStatement.executeUpdate();
+
             conn.commit();
             System.out.println("Row affected: " + row);
 
@@ -99,6 +115,7 @@ public class UserDAOImpl implements UserDAO {
             }
         }
     }
+
 
     public void updateUserNonResponse(User user) throws SQLException {
 
@@ -320,6 +337,53 @@ public class UserDAOImpl implements UserDAO {
 
             int[] rows = preparedStatement.executeBatch();
             System.out.println("Row affected: " + rows.length);
+            conn.commit();
+
+        } catch (SQLException e) {
+
+            conn.rollback();
+            throw new QueryFailException();
+
+        } finally {
+
+            if (Objects.nonNull(conn)) {
+                conn.close();
+            }
+
+        }
+    }
+
+
+    public void moneyProcess(String userIdSend, String userIdReceive, long money) throws SQLException {
+        Connection conn = null;
+
+        try {
+
+            conn = DataSource.getInstance().getConnection();
+            conn.setAutoCommit(false);
+            Statement stmt = conn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+
+            System.out.println(SELECT_FOR_UPDATE.replace("?", userIdSend));
+
+            ResultSet rs = stmt.executeQuery(SELECT_FOR_UPDATE.replace("?", userIdSend));
+
+            if (!rs.next()) {
+                throw new NotFoundException();
+            }
+
+            rs.updateLong("money", rs.getLong("money") - money);
+            rs.updateRow();
+
+
+            rs = stmt.executeQuery(SELECT_FOR_UPDATE.replace("?", userIdReceive));
+
+            if (!rs.next()) {
+                throw new NotFoundException();
+            }
+
+            rs.updateLong("money", rs.getLong("money") + money);
+            rs.updateRow();
+
             conn.commit();
 
         } catch (SQLException e) {

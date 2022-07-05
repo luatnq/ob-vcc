@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Objects;
@@ -97,19 +98,17 @@ public class UserServiceImpl implements UserService {
 
     }
 
+
     public BaseResponse transactionMoney(TransactionMoneyRequestDTO transactionMoneyRequestDTO) throws SQLException {
 
-        User userSend = userDAO.getUserByUserId(transactionMoneyRequestDTO.getFromUserId());
-
-        if (!this.isUserEligible(userSend)){
+        if (!this.isUserEligible(userDAO.getUserByUserId(transactionMoneyRequestDTO.getFromUserId()))){
             return new BaseResponse(MessageResponse.USER_NOT_ELIGIBLE_TRANSACTION_MONEY);
         }
 
-        User userReceive = userDAO.getUserByUserId(transactionMoneyRequestDTO.getToUserId());
-        this.moneyProcess(userSend, userReceive, transactionMoneyRequestDTO.getMoney());
-
-        userDAO.updateUserNonResponse(userSend);
-        userDAO.updateUserNonResponse(userReceive);
+        this.userDAO.moneyProcess(
+                transactionMoneyRequestDTO.getFromUserId(),
+                transactionMoneyRequestDTO.getToUserId(),
+                transactionMoneyRequestDTO.getMoney());
 
         return new BaseResponse(MessageResponse.SUCCESS);
 
@@ -119,13 +118,6 @@ public class UserServiceImpl implements UserService {
 
         if (user.getMoney() > 0) return true;
         return false;
-
-    }
-
-    private void moneyProcess(User userSend, User userReceive, long moneyPlus){
-
-        userReceive.setMoney( userReceive.getMoney() + moneyPlus);
-        userSend.setMoney(userSend.getMoney() - moneyPlus);
 
     }
 
