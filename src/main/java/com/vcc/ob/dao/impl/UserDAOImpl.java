@@ -36,11 +36,11 @@ public class UserDAOImpl implements UserDAO {
 
     private final String SELECT_FOR_UPDATE = "SELECT * FROM users as u WHERE u.user_id  = '?' ";
 
-    private final int PAGE_SIZE_DEFAULT = 10;
+    private final String UPDATE_PLUS_MONEY_FOR_USER = "update users u set u.money = (u.money + ? ) " +
+            "where u.user_id = ? ";
 
-    private final String LOCK_TABLE_WIRE = "LOCK TABLE (?) WRITE ";
-
-    private final String UNLOCK_TABLE_WRITE = "UNLOCK TABLES";
+    private final String UPDATE_SUB_MONEY_FOR_USER = "update users u set u.money = (u.money - ? ) " +
+            "where u.user_id = ? ";
 
     private final String TYPE_HANDLE_PLUS = "plus";
 
@@ -360,33 +360,20 @@ public class UserDAOImpl implements UserDAO {
         try {
 
             conn = DataSource.getInstance().getConnection();
-            conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
-
-            System.out.println(conn.getTransactionIsolation());
-
             conn.setAutoCommit(false);
-            Statement stmt = conn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 
-            System.out.println(SELECT_FOR_UPDATE.replace("?", userIdSend));
+            PreparedStatement preparedStatement = conn.prepareStatement(UPDATE_PLUS_MONEY_FOR_USER);
+            preparedStatement.setLong(1, money);
+            preparedStatement.setString(2, userIdReceive);
 
-            ResultSet rs = stmt.executeQuery(SELECT_FOR_UPDATE.replace("?", userIdSend));
+            if (preparedStatement.executeUpdate() == 0) throw new QueryFailException();
 
-            if (!rs.next()) {
-                throw new NotFoundException();
-            }
+            preparedStatement = conn.prepareStatement(UPDATE_SUB_MONEY_FOR_USER);
+            preparedStatement.setLong(1, money);
+            preparedStatement.setString(2, userIdSend);
 
-            rs.updateLong("money", rs.getLong("money") - money);
-            rs.updateRow();
+            if (preparedStatement.executeUpdate() == 0) throw new QueryFailException();
 
-
-            rs = stmt.executeQuery(SELECT_FOR_UPDATE.replace("?", userIdReceive));
-
-            if (!rs.next()) {
-                throw new NotFoundException();
-            }
-
-            rs.updateLong("money", rs.getLong("money") + money);
-            rs.updateRow();
 
             conn.commit();
 
