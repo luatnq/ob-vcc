@@ -101,10 +101,6 @@ public class UserServiceImpl implements UserService {
 
     public BaseResponse transactionMoney(TransactionMoneyRequestDTO transactionMoneyRequestDTO) throws SQLException {
 
-        if (!this.isUserEligible(userDAO.getUserByUserId(transactionMoneyRequestDTO.getFromUserId()))){
-            return new BaseResponse(MessageResponse.USER_NOT_ELIGIBLE_TRANSACTION_MONEY);
-        }
-
         this.userDAO.moneyProcess(
                 transactionMoneyRequestDTO.getFromUserId(),
                 transactionMoneyRequestDTO.getToUserId(),
