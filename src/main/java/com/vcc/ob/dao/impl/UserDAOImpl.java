@@ -40,7 +40,8 @@ public class UserDAOImpl implements UserDAO {
             "where u.user_id = ? ";
 
     private final String UPDATE_SUB_MONEY_FOR_USER = "update users u set u.money = (u.money - ? ) " +
-            "where u.user_id = ? ";
+            "where ( u.user_id = ? ) " +
+            "and ( u.money > 0 ) ";
 
     private final String TYPE_HANDLE_PLUS = "plus";
 
